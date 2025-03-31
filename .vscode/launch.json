@@ -2,14 +2,42 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "chrome",
+            "name": "Launch Frontend",
+            "type": "node",
             "request": "launch",
-            "name": "Launch Vite App",
-            "url": "http://localhost:5173",
-            "webRoot": "${workspaceFolder}",
-            "preLaunchTask": "Start Vite",
-            "sourceMaps": true
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "name": "Launch Backend",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/server.js",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "name": "Launch Full Stack",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev:all"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
         }
     ],
-    "compounds": []
+    "compounds": [
+        {
+            "name": "Full Stack",
+            "configurations": ["Launch Frontend", "Launch Backend"]
+        }
+    ]
 }

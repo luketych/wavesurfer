@@ -3,6 +3,9 @@
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.js';
 
+// Add API base URL
+const API_BASE_URL = 'http://localhost:3000';
+
 // Initialize WaveSurfer
 const wavesurfer = WaveSurfer.create({
     container: '#waveform',
@@ -41,10 +44,15 @@ wavesurfer.load('demo.mp3');
 
 // Get DOM elements
 const audioFileSelect = document.getElementById('audioFile');
+const playPauseButton = document.getElementById('playPause');
 const clipButton = document.getElementById('clip');
 const saveButton = document.getElementById('save');
+const clipList = document.getElementById('clipList');
 
 let currentRegion = null;
+let isPlaying = false;
+let timeUpdateHandler = null;
+let clipCounter = 0;
 
 // Handle audio file selection
 audioFileSelect.addEventListener('change', (e) => {
@@ -69,6 +77,21 @@ wsRegions.on('region-updated', (region) => {
 // Handle region removal
 wsRegions.on('region-removed', () => {
     currentRegion = null;
+    if (timeUpdateHandler) {
+        wavesurfer.un('timeupdate', timeUpdateHandler);
+        timeUpdateHandler = null;
+    }
+});
+
+// Handle play/pause button click
+playPauseButton.addEventListener('click', () => {
+    if (wavesurfer.isPlaying()) {
+        wavesurfer.pause();
+        playPauseButton.textContent = 'Play';
+    } else {
+        wavesurfer.play();
+        playPauseButton.textContent = 'Pause';
+    }
 });
 
 // Handle clip button click
@@ -86,23 +109,64 @@ clipButton.addEventListener('click', () => {
     
     // Play the selected region
     wavesurfer.play();
+    playPauseButton.textContent = 'Pause';
     
     // Handle playback reaching the end of the region
-    const handleTimeUpdate = () => {
+    if (timeUpdateHandler) {
+        wavesurfer.un('timeupdate', timeUpdateHandler);
+    }
+    
+    timeUpdateHandler = () => {
         if (wavesurfer.getCurrentTime() >= currentRegion.end) {
             wavesurfer.stop();
-            wavesurfer.un('timeupdate', handleTimeUpdate);
+            wavesurfer.un('timeupdate', timeUpdateHandler);
+            timeUpdateHandler = null;
+            playPauseButton.textContent = 'Play';
         }
     };
     
-    wavesurfer.on('timeupdate', handleTimeUpdate);
-    
-    // Stop playing when region is removed
-    wavesurfer.on('region-removed', () => {
-        wavesurfer.stop();
-        wavesurfer.un('timeupdate', handleTimeUpdate);
-    });
+    wavesurfer.on('timeupdate', timeUpdateHandler);
 });
+
+// Function to add a clip to the UI
+function addClipToUI(clipPath) {
+    const li = document.createElement('li');
+    li.className = 'clip-item';
+    
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = clipPath;
+    
+    const actions = document.createElement('div');
+    actions.className = 'clip-actions';
+    
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.onclick = async () => {
+        try {
+            const filename = clipPath.split('/').pop();
+            console.log('Deleting file:', filename);
+            
+            const response = await fetch(`${API_BASE_URL}/api/clips/${filename}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to delete clip');
+            }
+            
+            li.remove();
+        } catch (error) {
+            console.error('Error deleting clip:', error);
+            alert('Error deleting clip. Please try again.');
+        }
+    };
+    
+    actions.appendChild(deleteButton);
+    li.appendChild(audio);
+    li.appendChild(actions);
+    clipList.appendChild(li);
+}
 
 // Handle save button click
 saveButton.addEventListener('click', async () => {
@@ -138,18 +202,32 @@ saveButton.addEventListener('click', async () => {
         const wav = audioBufferToWav(buffer);
         const blob = new Blob([wav], { type: 'audio/wav' });
         
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'clipped_audio.wav';
-        a.click();
+        // Create FormData and append the blob
+        const formData = new FormData();
+        formData.append('audio', blob, `clip_${clipCounter++}.mp3`);
         
-        // Cleanup
-        URL.revokeObjectURL(url);
+        // Send the file to the server
+        console.log('Sending file to server...');
+        const response = await fetch(`${API_BASE_URL}/api/clips`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to save clip');
+        }
+        
+        const result = await response.json();
+        console.log('Server response:', result);
+        
+        // Add the clip to the UI with the full URL
+        addClipToUI(`${API_BASE_URL}${result.clipPath}`);
+        
+        alert('Clip saved successfully!');
     } catch (error) {
         console.error('Error saving audio:', error);
-        alert('Error saving audio. Please try again.');
+        alert(`Error saving audio: ${error.message}`);
     }
 });
 

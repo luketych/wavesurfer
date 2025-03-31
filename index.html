@@ -61,6 +61,45 @@
         .instructions li {
             margin: 10px 0;
         }
+        .saved-clips {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .saved-clips h2 {
+            margin-top: 0;
+            color: #4F4A85;
+        }
+        .clip-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .clip-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .clip-item:last-child {
+            margin-bottom: 0;
+        }
+        .clip-item audio {
+            flex: 1;
+        }
+        .clip-item .clip-actions {
+            display: flex;
+            gap: 5px;
+        }
+        .clip-item button {
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -72,7 +111,7 @@
             <li>Select an audio file from the dropdown menu</li>
             <li>Click and drag on the waveform to select the region you want to clip</li>
             <li>Use the "Play Region" button to preview your selection</li>
-            <li>Click "Save Clipped Audio" to download your selection as a WAV file</li>
+            <li>Click "Save Clipped Audio" to save your selection</li>
         </ol>
     </div>
 
@@ -85,8 +124,16 @@
     <div id="waveform"></div>
 
     <div class="controls">
+        <button id="playPause">Play/Pause</button>
         <button id="clip">Play Region</button>
         <button id="save">Save Clipped Audio</button>
+    </div>
+
+    <div class="saved-clips">
+        <h2>Saved Clips</h2>
+        <ul id="clipList" class="clip-list">
+            <!-- Saved clips will be added here -->
+        </ul>
     </div>
 
     <script type="module" src="savesurfer.js"></script>
